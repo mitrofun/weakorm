@@ -340,33 +340,33 @@ class Query:
 # code
 
 
-# db = DataBase('db.sqlite')
+db = DataBase('db.sqlite')
 
 
-# class User(Model):
-#     name = CharField(max_length=20)
-#     email = CharField(max_length=40, unique=True)
-#     birthday = DateTimeField()
-#     is_admin = BooleanField(default=False)
-#
-#     def __str__(self):
-#         return self.name
-#
-#
-# class Stuff(Model):
-#     user = ForeignKey(User)
-#     position = CharField(max_length=40)
+class User(Model):
+    name = CharField(max_length=20)
+    email = CharField(max_length=40, unique=True)
+    birthday = DateTimeField()
+    is_admin = BooleanField(default=False)
 
+    def __str__(self):
+        return self.name
+
+
+class Stuff(Model):
+    user = ForeignKey(User)
+    position = CharField(max_length=40)
+
+
+user = User(name='Mik', email='mik@gmail.com', birthday=datetime(year=2000, month=1, day=1))
+staff = Stuff(user=user, position='Tester')
+
+print(user)
+print(staff)
+
+user.save()
+staff.save()
 #
-# user = User(name='Mik', email='mik@gmail.com', birthday=datetime(year=2000, month=1, day=1))
-# staff = Stuff(user=user, position='Tester')
+user = User.query().first()
 #
-# print(user)
-# print(staff)
-#
-# user.save()
-# staff.save()
-# #
-# user = User.query().first()
-# #
-# # print(users)
+# print(users)
