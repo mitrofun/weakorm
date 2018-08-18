@@ -79,7 +79,7 @@ class Field:
 
 class CharField(Field):
     def __init__(self, max_length=255, default='', unique=False):
-        self.field_type = 'varchar(%d)' % max_length
+        self.field_type = f'varchar({max_length})'
         self.default = default
         self.max_length = max_length
         self.unique = unique
@@ -192,7 +192,7 @@ class Model:
         name_value = []
 
         for name, value in zip(self.field_names, self.field_values):
-            name_value.append("%s=%s" % (name, value))
+            name_value.append(f"{name}={value}")
         name_value_sql = ", ".join(name_value)
 
         sql = f"update `{self.table_name}` set {name_value_sql} where id = {self.id}"
@@ -265,7 +265,7 @@ class Query:
         for name in dir(self.model_class):
             var = getattr(self.model_class, name.replace("`", ""))
             if isinstance(var, Field):
-                names.append("`%s`" % name)
+                names.append(f"`{name}`")
         return names
 
     @property
