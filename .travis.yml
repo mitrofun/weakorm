@@ -1,0 +1,17 @@
+language: python
+
+python:
+  - "3.6"
+
+services:
+  - docker
+
+install:
+  - pip install git+https://github.com/mitrofun/weakorm
+
+before_install:
+  - docker build . -t weakorm
+
+script:
+  - docker run --rm weakorm python3 setup.py test
+  - python3 example.py

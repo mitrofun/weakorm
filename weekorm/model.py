@@ -1,56 +1,6 @@
 from datetime import datetime
 
-import sqlite3
-
-# module database
-
-SETTINGS = {
-    'db_name': '',
-    'connect': '',
-}
-
-
-def set_db_name(db_name):
-    SETTINGS['db_name'] = db_name
-    SETTINGS['connection'] = sqlite3.connect(db_name)
-
-
-def get_cursor():
-    if not SETTINGS.get('connection'):
-        SETTINGS['connection'] = sqlite3.connect(SETTINGS['db_name'])
-    cursor = SETTINGS['connection'].cursor()
-    return cursor
-
-
-def db_commit():
-    SETTINGS['connection'].commit()
-
-
-def execute_sql(cursor, sql):
-    try:
-        cursor.execute(sql)
-    except Exception as e:
-        print('error')
-        print(sql)
-        raise e
-
-
-class DataBase:
-
-    def __init__(self, name):
-        self.db_name = name
-        self.connection = sqlite3.connect(name)
-        self.cursor = self.connection.cursor()
-        self._save_settings()
-
-    def _save_settings(self):
-        SETTINGS['connection'] = self.connection
-        SETTINGS['db_name'] = self.db_name
-
-    def __del__(self):
-        self.connection.close()
-
-# module model
+from weekorm import db
 
 
 class Field:
@@ -70,7 +20,6 @@ class Field:
         return field_sql
 
     def to_python(self, value):
-        print(self.python_type)
         if self.python_type == datetime:
             value = datetime.fromtimestamp(value)
             return value
@@ -140,7 +89,6 @@ class Model:
             field = getattr(self.__class__, name.replace("`", ""))
             setattr(self, name.replace("`", ""), field.default)
         for key, value in kwargs.items():
-            # print(key, value)
             setattr(self, key.replace("`", ""), value)
 
     def __str__(self):
@@ -173,21 +121,20 @@ class Model:
         return values
 
     def insert(self):
-        cursor = get_cursor()
-
+        cursor = db.get_cursor()
         field_names_sql = ", ".join(self.field_names)
         field_values_sql = ", ".join(self.field_values)
 
         sql = f"insert into `{self.table_name}`({ field_names_sql}) values({field_values_sql})"
-        execute_sql(cursor, sql)
-        db_commit()
+        db.execute_sql(cursor, sql)
+        db.db_commit()
 
         sql = f"select id from `{self.table_name}` order by id desc;"
-        execute_sql(cursor, sql)
+        db.execute_sql(cursor, sql)
         self.id = cursor.fetchone()[0]
 
     def update(self):
-        cursor = get_cursor()
+        cursor = db.get_cursor()
 
         name_value = []
 
@@ -196,8 +143,8 @@ class Model:
         name_value_sql = ", ".join(name_value)
 
         sql = f"update `{self.table_name}` set {name_value_sql} where id = {self.id}"
-        execute_sql(cursor, sql)
-        db_commit()
+        db.execute_sql(cursor, sql)
+        db.db_commit()
 
     def save(self):
         if self.id:
@@ -207,20 +154,20 @@ class Model:
         return self
 
     def delete(self):
-        cursor = get_cursor()
+        cursor = db.get_cursor()
         sql = f"delete from `{self.table_name}` where id = {self.id}"
-        execute_sql(cursor, sql)
-        db_commit()
+        db.execute_sql(cursor, sql)
+        db.db_commit()
 
     @classmethod
     def try_create_table(cls):
         table_name = cls.__name__.lower()
-        cursor = get_cursor()
+        cursor = db.get_cursor()
         sql = f"select * from sqlite_master where type='table' AND name='{table_name}';"
-        execute_sql(cursor, sql)
+        db.execute_sql(cursor, sql)
         if not cursor.fetchall():
             sql = f"drop table if exists `{table_name}`;"
-            execute_sql(cursor, sql)
+            db.execute_sql(cursor, sql)
 
             fields_sql = ""
             for name in dir(cls):
@@ -230,9 +177,9 @@ class Model:
                     field_sql = field.field_sql(name)
                     fields_sql += ", " + field_sql
             sql = f'create table `{table_name}` ("id" integer not null primary key {fields_sql});'
-            execute_sql(cursor, sql)
+            db.execute_sql(cursor, sql)
 
-            db_commit()
+            db.db_commit()
 
     @classmethod
     def query(cls):
@@ -289,28 +236,23 @@ class Query:
     def _r2ob(self, item):
         value = ''
         inst_id = item[0]
-        ob = self.model_class(inst_id=inst_id)
+        obj = self.model_class(inst_id=inst_id)
         for i in range(1, len(item)):
             name = self.field_names[i - 1]
             field = getattr(self.model_class, name.replace("`", ""))
-            # print(field)
-            # print(field.python_type)
-            # print(self.model_class)
-            # import ipdb;ipdb.set_trace()
             if not field.is_foreign_key:
                 value = field.to_python(item[i])
-                # print(value)
             if field.is_foreign_key:
                 if field.field_type == "foreignkey":
                     fid = item[i]
-                    value = field.to_python(field.model_class.get(id=fid))
-            setattr(ob, name.replace("`", ""), value)
-        return ob
+                    value = field.model_class.get(id=fid)
+            setattr(obj, name.replace("`", ""), value)
+        return obj
 
     def all(self):
-        cursor = get_cursor()
+        cursor = db.get_cursor()
         sql = self.query_sql
-        execute_sql(cursor, sql)
+        db.execute_sql(cursor, sql)
         rows = cursor.fetchall()
         obs = []
         for item in rows:
@@ -319,9 +261,9 @@ class Query:
         return obs
 
     def first(self):
-        cursor = get_cursor()
+        cursor = db.get_cursor()
         sql = self.query_sql
-        execute_sql(cursor, sql)
+        db.execute_sql(cursor, sql)
         rows = cursor.fetchall()
         if rows:
             r = rows[0]
@@ -331,42 +273,7 @@ class Query:
             return None
 
     def delete(self):
-        cursor = get_cursor()
+        cursor = db.get_cursor()
         sql = f"delete from `{self.table_name}` where {self.where_sql}"
-        execute_sql(cursor, sql)
-        db_commit()
-
-
-# code
-
-
-db = DataBase('db.sqlite')
-
-
-class User(Model):
-    name = CharField(max_length=20)
-    email = CharField(max_length=40, unique=True)
-    birthday = DateTimeField()
-    is_admin = BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
-
-
-class Stuff(Model):
-    user = ForeignKey(User)
-    position = CharField(max_length=40)
-
-
-user = User(name='Mik', email='mik@gmail.com', birthday=datetime(year=2000, month=1, day=1))
-staff = Stuff(user=user, position='Tester')
-
-print(user)
-print(staff)
-
-user.save()
-staff.save()
-#
-user = User.query().first()
-#
-# print(users)
+        db.execute_sql(cursor, sql)
+        db.db_commit()
