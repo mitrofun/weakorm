@@ -1,5 +1,7 @@
 WeakORM
 ===
+[![Build Status](https://travis-ci.org/mitrofun/weakorm.svg?branch=master)](https://travis-ci.org/mitrofun/weakorm) [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/mitrofun/weakorm/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/mitrofun/weakorm/?branch=master) 
+
 Simple ORM for sqlite.
 
 Installation
