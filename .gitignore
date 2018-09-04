@@ -13,15 +13,7 @@
 __pycache__/
 *.py[cod]
 ### Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-coverage.xml
-*,cover
-/.cache/
-/.pytest_cache/
+.pytest_cache
 
 ### Envirement dirs
 .direnv
@@ -29,24 +21,10 @@ coverage.xml
 env
 venv
 ### Current project
-/app/static/img/
-/data/
 *.sqlite
-*.log
-*.log*
 ### Distribution / packaging
-.Python
-# build/
 develop-eggs/
 dist/
-downloads/
-eggs/
 .eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 *.egg-info/
-.installed.cfg
 *.egg

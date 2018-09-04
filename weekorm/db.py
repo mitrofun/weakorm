@@ -32,7 +32,10 @@ def execute_sql(cursor, sql):
 
 
 class DataBase:
-
+    """
+    Create a database if it does not exist
+    or connect to existing.
+    """
     def __init__(self, name):
         self.db_name = name
         self.connection = sqlite3.connect(name)

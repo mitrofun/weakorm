@@ -58,7 +58,7 @@ class User(model.Model):
     def __str__(self):
         return self.name
 
-class Stuff(model.Model):
+class Staff(model.Model):
     user = model.ForeignKey(User)
     position = model.CharField(max_length=40)
 
@@ -74,16 +74,37 @@ user = User(
     birthday=datetime(year=1983, month=12, day=6)
 )
 user.save()
-staff = Stuff(user=user, position='Tester')
+staff = Staff(user=user, position='Tester')
 staff.save()
 ```
-Testing
+Select data
+---
+
+```python
+staff = Staff.query().filter(position='Tester').first()
+```
+
+Update data
+---
+```python
+staff.position = 'Developer'
+staff.save()
+```
+
+Update data in query
+---
+You can also update the data for a set of features that meet the selection condition.
+```python
+Staff.query().filter(position='Tester').update(position='QA')
+```
+
+Develop
 ===
 Local
 ---
-To develop and test locally, install the dependencies
+To develop locally, install the dependencies
 ```bash
-pip3 install -r requirements/qa.txt
+pip3 install -r requirements/develop.txt
 ```
 Running tests
 ```bash

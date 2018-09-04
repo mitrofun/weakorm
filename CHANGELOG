@@ -1,2 +1,6 @@
+0.1.1
+- add exceptions for name field and value type field
+- add update method for query
+
 0.1
 - first beta version

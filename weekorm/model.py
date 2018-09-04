@@ -1,9 +1,13 @@
 from datetime import datetime
 
+from . import exception
 from weekorm import db
 
 
 class Field:
+    """
+    Base class for fields
+    """
     field_type = ''
     default = ''
     is_foreign_key = False
@@ -27,6 +31,10 @@ class Field:
 
 
 class CharField(Field):
+    """
+    Char field, default max length is 255 and default value is ''
+    Python type is str
+    """
     def __init__(self, max_length=255, default='', unique=False):
         self.field_type = f'varchar({max_length})'
         self.default = default
@@ -36,6 +44,10 @@ class CharField(Field):
 
 
 class IntegerField(Field):
+    """
+    Integer field, default value is 0
+    Python type is int
+    """
     def __init__(self, default=0, unique=False):
         self.field_type = 'integer'
         self.default = default
@@ -44,6 +56,10 @@ class IntegerField(Field):
 
 
 class FloatField(Field):
+    """
+    Float field, default value is 0.0
+    Python type is float
+    """
     def __init__(self, default=0.0, unique=False):
         self.field_type = 'real'
         self.default = default
@@ -52,6 +68,10 @@ class FloatField(Field):
 
 
 class BooleanField(Field):
+    """
+    Boolean field, default value is False.
+    Python type is bool
+    """
     def __init__(self, default=False, unique=False):
         self.field_type = 'integer'
         self.default = default
@@ -60,6 +80,10 @@ class BooleanField(Field):
 
 
 class DateTimeField(Field):
+    """
+    Boolean field, default value is False
+    Python type is datetime
+    """
     def __init__(self, default=0.0, unique=False):
         self.field_type = 'real'
         self.default = default
@@ -68,6 +92,9 @@ class DateTimeField(Field):
 
 
 class ForeignKey(Field):
+    """
+    Foreign field for other model
+    """
     def __init__(self, model_class):
         self.field_type = 'foreignkey'
         self.is_foreign_key = True
@@ -84,11 +111,32 @@ class Model:
         self.table_name = self.__class__.__name__.lower()
         self.id = inst_id
         self.__class__.try_create_table()
-
         for name in self.field_names:
             field = getattr(self.__class__, name.replace("`", ""))
             setattr(self, name.replace("`", ""), field.default)
         for key, value in kwargs.items():
+            # exception with field name
+            if f"`{key}`" not in self.field_names + ["`id`"]:
+                raise exception.ModelFieldNameException(
+                    model_name=self.__class__.__name__,
+                    field_name=key,
+                )
+            # exception with field type wrong for foreign_key
+            if hasattr(self.__class__.__dict__[key], 'model_class') and \
+                    not isinstance(value, self.__class__.__dict__[key].model_class):
+                raise exception.ModelFieldTypeException(
+                    model=self.__class__.__name__,
+                    field_name=key,
+                    field_type=self.__class__.__dict__[key].model_class.__name__,
+                    value_type=type(value).__name__)
+            # exception with field type wrong for other fields
+            if not hasattr(self.__class__.__dict__[key], 'model_class') and\
+                    not isinstance(value, self.__class__.__dict__[key].python_type):
+                raise exception.ModelFieldTypeException(
+                    model=self.__class__.__name__,
+                    field_name=key,
+                    field_type=self.__class__.__dict__[key].python_type.__name__,
+                    value_type=type(value).__name__)
             setattr(self, key.replace("`", ""), value)
 
     def __str__(self):
@@ -120,7 +168,7 @@ class Model:
             values.append(f"'{value}'")
         return values
 
-    def insert(self):
+    def __insert(self):
         cursor = db.get_cursor()
         field_names_sql = ", ".join(self.field_names)
         field_values_sql = ", ".join(self.field_values)
@@ -133,7 +181,7 @@ class Model:
         db.execute_sql(cursor, sql)
         self.id = cursor.fetchone()[0]
 
-    def update(self):
+    def __update(self):
         cursor = db.get_cursor()
 
         name_value = []
@@ -148,9 +196,9 @@ class Model:
 
     def save(self):
         if self.id:
-            self.update()
+            self.__update()
         else:
-            self.insert()
+            self.__insert()
         return self
 
     def delete(self):
@@ -223,12 +271,16 @@ class Query:
     def filter(self, operator="=", **kwargs):
         where_sql = self.where_sql
         for name, value in kwargs.items():
-            if f"`{name}`" in self.field_names + ["`id`"]:
-                if isinstance(value, Model):
-                    value = value.id
-                if isinstance(value, str):
-                    value = value.replace("'", "''")
-                where_sql += f" and `{name}` {operator} '{value}'"
+            if f"`{name}`" not in self.field_names + ["`id`"]:
+                raise exception.ModelFieldNameException(
+                    model_name=self.model_class.__name__,
+                    field_name=name,
+                )
+            if isinstance(value, Model):
+                value = value.id
+            if isinstance(value, str):
+                value = value.replace("'", "''")
+            where_sql += f" and `{name}` {operator} '{value}'"
         query = self.__class__(self.model_class)
         query.where_sql = where_sql
         return query
@@ -265,15 +317,34 @@ class Query:
         sql = self.query_sql
         db.execute_sql(cursor, sql)
         rows = cursor.fetchall()
-        if rows:
-            r = rows[0]
-            ob = self._r2ob(r)
-            return ob
-        else:
+        if not rows:
             return None
+        r = rows[0]
+        ob = self._r2ob(r)
+        return ob
 
     def delete(self):
         cursor = db.get_cursor()
         sql = f"delete from `{self.table_name}` where {self.where_sql}"
+        db.execute_sql(cursor, sql)
+        db.db_commit()
+
+    def update(self, **kwargs):
+        cursor = db.get_cursor()
+        update_sql = ''
+        for name, value in kwargs.items():
+            if f"`{name}`" not in self.field_names + ["`id`"]:
+                raise exception.ModelFieldNameException(
+                    model_name=self.model_class.__name__,
+                    field_name=name,
+                )
+            if isinstance(value, Model):
+                value = value.id
+            if isinstance(value, str):
+                value = value.replace("'", "''")
+            update_sql += f"`{name}` = '{value}',"
+        if update_sql:
+            update_sql = update_sql[:-1]
+        sql = f"update `{self.table_name}` set {update_sql} where {self.where_sql}"
         db.execute_sql(cursor, sql)
         db.db_commit()

@@ -1,21 +1,16 @@
 Dockerfile
-docker-compose.yml
 
 .git
 .gitignore
-.editorconfig
-.gitlabvars.ini
-.cache
 
-misc
 env
 venv
-media
 
 __pycache__
 .python-version
 *.pyc
 *.pyo
 
+.cache
 .pytest_cache
 *.sqlite

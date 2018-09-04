@@ -16,7 +16,7 @@ class User(model.Model):
         return self.name
 
 
-class Stuff(model.Model):
+class Staff(model.Model):
     user = model.ForeignKey(User)
     position = model.CharField(max_length=40)
 
@@ -29,7 +29,7 @@ user = User(
     email='mik@gmail.com',
     birthday=datetime(year=2000, month=1, day=1)
 )
-staff = Stuff(user=user, position='Tester')
+staff = Staff(user=user, position='Tester')
 
 if User.query().filter(email=user.email).first():
     print('This user is already in the database')

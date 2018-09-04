@@ -8,7 +8,7 @@ if not sys.version_info[0] == 3 and sys.version_info[0] == 6:
 
 setup(
     name='weakorm',
-    version='0.1',
+    version='0.1.1',
     packages=find_packages(),
     long_description=open(join(dirname(__file__), 'README.md')).read(),
     url='https://github.com/mitrofun/weakorm',
